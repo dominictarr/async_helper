@@ -86,6 +86,7 @@ exports['test isCalled'] = function (test){
     
     x()
 }
+
 exports['test isCalled twice'] = function (test){
   var isCalled = helper.callChecker(50,test.finish)
     , x = isCalled()
@@ -118,7 +119,7 @@ exports['test isCalled.times(2) errors if called less than twice. '] = function 
 }
 
 exports['test isCalled.times(2) errors if called more than twice. '] = function (test){
-  var isCalled = helper.callChecker(50)
+  var isCalled = helper.callChecker(50).asserter(test)
     , x = isCalled().times(2)
     
     x()
@@ -145,4 +146,34 @@ exports['test isCalled.times(0) errors if called at all. '] = function (test){
   i'll have to beable to reference that too!
 
 */
+
+//will this work with identical anonymous functions?
+
+exports['test isCalled(x).after(y) checks that x is called before y'] = function (test){
+  var isCalled = helper.callChecker(50)
+    , x = isCalled(X)
+    , y = isCalled(Y).after(X)
+
+    function X (){}
+    function Y (){}
+    
+    x()
+    y()//because x has not yet been called.
+
+    test.finish()
+}
+
+exports['test isCalled(x).after(y) errors if y is called before x'] = function (test){
+  var isCalled = helper.callChecker(50)
+    , x = isCalled(X)
+    , y = isCalled(Y).after(X)
+
+    function X (){}
+    function Y (){}
+    
+    test.throws(y)//because x has not yet been called.
+    x()
+
+    test.finish()
+}
 

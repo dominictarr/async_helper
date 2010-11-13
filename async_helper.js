@@ -65,45 +65,97 @@ function isCalled(func,deadline,obj){
   }
 }
 
-
 function callChecker (timeout,done){
   var atleastone = false
-    , functions = []
-  timer = setTimeout(function (){
-    assert.ok(atleastone,"callChecker(" + timeout + ",done) as called. but return value, isCalled() was never invoked")
-    assert.equal(functions.length,0,functions.length + " functions wrapped in isCalled(function) where not called")
-  });
+    , functions = {}
+    , _assert = assert
+    , timer = setTimeout(function (){
+      _assert.ok(atleastone,"callChecker(" + timeout + ",done) as called. but return value, isCalled() was never invoked")
+      unfinished = checkFinished()
+      _assert.equal(unfinished,0, errorReport ())
+    });
+  isCalled.asserter = function(ass){
+    _assert = ass
+    return isCalled
+  }
 
   return isCalled
   function isCalled (func,obj){
-    functions.push(func)
+    func = func || ("Anonymous_" + Math.round(Math.random()*10000000))
     atleastone = true
+
+    functions[func] = 
+      { self:obj
+      , called: 0
+      , times: 1
+      }
     
     checker.times = function (n){
-      //just delete the extra occurances, and then add what number is desired.
-      //this is far from optiomal. but i'm hungover.
-      while(functions.indexOf(func) != -1){
-        functions.splice(functions.indexOf(func),1)  
-      }
-      for (i = 0; i < n; i ++){
-        functions.push(func)
-      }
+      functions[func].times = n
       return checker
-    }    
+    }
+    checker.before = function (n){
+      functions[func].before = n
+      return checker
+    }
+    checker.after = function (n){
+      functions[func].after = n
+      return checker
+    }
+
     return checker
     function checker (){
-      var index = functions.indexOf(func)
-        , returned
+      var returned
 
-      assert.notEqual(index,-1,'unexpected call of :' + func)
+      //_assert.notEqual(index,-1,'unexpected call of :' + func)
+      if(functions[func].before){
+        _assert.strictEqual(functions[functions[func].before].isCalled,false
+          , "function :" + func + " expected to be called after "
+          + "function :" + functions[func].before)
+      } else if(functions[func].after) {
+        _assert.strictEqual(functions[functions[func].after].isCalled,true
+          , "function :" + func + " expected to be called after "
+          + "function :" + functions[func].after)
+      }
       
-      returned = func ? func.apply(obj,arguments) : null
+      functions[func].isCalled = true
+      _assert.ok(functions[func].called < functions[func].times
+           , "function :" + func 
+           + " has already been called: " 
+           + functions[func].times + " times")
+
+      returned = 'function' == typeof func ? func.apply(obj,arguments) : null
       
-      functions.splice(index,1)
-      if(functions.length == 0 && done){
-        process.nextTick(done)
+      functions[func].called = functions[func].called + 1 
+
+      if(checkFinished() == 0){
+        clearTimeout(timer)
+        if(done)
+          process.nextTick(done)
       }
       return returned
     }
   }
+
+  function checkFinished (){
+    var unfinished = 0
+    for(i in functions){
+      if(functions[i].called !== functions[i].times)
+        unfinished = unfinished + 1
+    }  
+    return unfinished
+  }
+  function errorReport (){
+    var s = ''
+    for(i in functions){
+      if(functions[i].called !== functions[i].times){
+        s = s + 'expected: ' + i 
+          + " to be called " 
+          + functions[i].times + " times, was called: "   
+          + functions[i].called + " times.\n"
+      }
+    }  
+    return s
+  }
+
 }
