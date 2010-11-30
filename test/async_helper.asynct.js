@@ -98,6 +98,28 @@ exports['test isCalled twice'] = function (test){
     })
 }
 
+exports['call is registered even if the function throws'] = function (test){
+  var isCalled = helper.callChecker(50,called)
+    , x = isCalled()
+    , error = new Error("an error thrown within a checked callback")
+    , y = isCalled(function (){throw error })
+    
+    x()
+    process.nextTick(function (){
+      y()
+    })
+    
+    test.uncaughtExceptionHandler = function (e){
+      test.equal(e,error)
+    }
+    
+    function called(){
+      test.finish()
+    }
+    
+}
+
+
 //expand this to handle multiple calls: isCalled(func).times(10) or .not() before(other_func) or after(other_func)
 /*
   how might i implement that?

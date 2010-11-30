@@ -61,7 +61,7 @@ function isCalled(func,deadline,obj){
   }
 
   function tooLate(){
-    test.ok(false,"expected function " + func + " to have been called within " + deadline + " milliseconds")
+    assert.ok(false,"expected function " + func + " to have been called within " + deadline + " milliseconds")
   }
 }
 
@@ -106,6 +106,7 @@ function callChecker (timeout,done){
     return checker
     function checker (){
       var returned
+        , thrown = null
 
       //_assert.notEqual(index,-1,'unexpected call of :' + func)
       if(functions[func].before){
@@ -124,8 +125,11 @@ function callChecker (timeout,done){
            + " has already been called: " 
            + functions[func].times + " times")
 
+      try {
       returned = 'function' == typeof func ? func.apply(obj,arguments) : null
-      
+      } catch (error){
+        thrown = error
+      }
       functions[func].called = functions[func].called + 1 
 
       if(checkFinished() == 0){
@@ -133,6 +137,8 @@ function callChecker (timeout,done){
         if(done)
           process.nextTick(done)
       }
+      if(thrown)
+        throw thrown
       return returned
     }
   }
