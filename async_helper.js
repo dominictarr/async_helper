@@ -73,10 +73,13 @@ function callChecker (timeout,done){
       _assert.ok(atleastone,"callChecker(" + timeout + ",done) as called. but return value, isCalled() was never invoked")
       unfinished = checkFinished()
       _assert.equal(unfinished,0, errorReport ())
-    });
+    },timeout);
   isCalled.asserter = function(ass){
     _assert = ass
     return isCalled
+  }
+  isCalled.cancel = function (){
+    clearTimeout(timer)
   }
 
   return isCalled
@@ -102,6 +105,7 @@ function callChecker (timeout,done){
       functions[func].after = n
       return checker
     }
+
 
     return checker
     function checker (){

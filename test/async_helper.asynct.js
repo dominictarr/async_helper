@@ -72,7 +72,7 @@ exports['test checklist done cancels timeout '] = function (test){
 
 //give checklist a custom assert
 
-exports['test isCalled'] = function (test){
+exports['test isCalled throws if not called'] = function (test){
   var isCalled = helper.callChecker(50)
   test.uncaughtExceptionHandler = function(error){ //if no functions are set isCalled and it times out, thats an error.
     test.equal(error.name,'AssertionError')
@@ -85,6 +85,14 @@ exports['test isCalled'] = function (test){
     , x = isCalled()
     
     x()
+}
+
+exports['test isCalled passes is not called and is canceled'] = function (test){
+  var isCalled = helper.callChecker(0,test.finish)
+    , x = isCalled()
+    
+    isCalled.cancel()
+    setTimeout(test.finish,100)
 }
 
 exports['test isCalled twice'] = function (test){
@@ -180,22 +188,51 @@ exports['test isCalled(x).after(y) checks that x is called before y'] = function
     function Y (){}
     
     x()
-    y()//because x has not yet been called.
+    y()
 
     test.finish()
 }
 
 exports['test isCalled(x).after(y) errors if y is called before x'] = function (test){
   var isCalled = helper.callChecker(50)
-    , x = isCalled(X)
-    , y = isCalled(Y).after(X)
+    , x = isCalled(X, " must be called before Y")
+    , y = isCalled(Y, "Y must be called after X").after(X)
 
     function X (){}
     function Y (){}
-    
-    test.throws(y)//because x has not yet been called.
-    x()
 
-    test.finish()
+    process.nextTick(function (){
+      isCalled.cancel() // wipe all errors.
+      test.finish()
+    })
+    
+//    checkThrowsWithName(test,y,"Y must be called after X")//because x has not yet been called.
+    test.throws(y)
+    x()
 }
 
+/*
+  async_helper has a bug where it doesn't catch errors which throw after the last test is finished.
+*/
+/*implementing this would require an overhaul of async_helper
+function checkThrowsWithName(test,func,name){
+//  test.throws(func)
+  name = name || ''
+  try { 
+    func()
+  } catch (error){
+    console.log(error.message, JSON.stringify(name))
+    if(-1 == error.message.indexOf(name))
+      test.ok(false,"expected to find string:" 
+        + JSON.stringify(name) 
+        + " within error message "
+        + JSON.stringify(error.message))
+
+    return
+  }
+  test.ok(false,"expected function:" 
+    + func.name 
+    + " " + JSON.stringify(name)
+    + " to throw an error")
+
+}*/
